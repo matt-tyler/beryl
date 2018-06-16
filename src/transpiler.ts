@@ -33,7 +33,21 @@ export module transpiler {
 
     function GetFailDeclaration() {
         return ts.createVariableDeclarationList(
-            single(ts.createVariableDeclaration("fail")), 
+            single(ts.createVariableDeclaration(
+                "fail",
+                ts.createFunctionTypeNode(
+                    NO_TYPE_PARAMETERS,
+                    single(ts.createParameter(
+                        NO_DECORATORS,
+                        NO_MODIFIERS,
+                        undefined,
+                        ts.createIdentifier("msg"),
+                        undefined,
+                        ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword)
+                    )),
+                    ts.createKeywordTypeNode(ts.SyntaxKind.VoidKeyword)
+                )
+            )), 
             ts.NodeFlags.Const 
         )
     }
@@ -74,7 +88,10 @@ export module transpiler {
                                 ts.createTypeReferenceNode(ts.createIdentifier("Row"), NO_TYPE_ARGUMENTS)
                             )
                         ],
-                        NO_RETURN_TYPE,
+                        ts.createTypeReferenceNode(
+                            "Promise",
+                            single(ts.createKeywordTypeNode(ts.SyntaxKind.VoidKeyword))
+                        ),
                         ts.createBlock(single(GetFailStatement()), true)
                     )
                 })
