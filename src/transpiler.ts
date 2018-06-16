@@ -31,6 +31,16 @@ export module transpiler {
         return typeAliasDeclaration
     }
 
+    function GetWorldDeclaration() {
+        return ts.createVariableDeclarationList(
+            single(ts.createVariableDeclaration(
+                "world",
+                ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)
+            )),
+            ts.NodeFlags.Const
+        )
+    }
+
     function GetFailDeclaration() {
         return ts.createVariableDeclarationList(
             single(ts.createVariableDeclaration(
@@ -112,6 +122,7 @@ export module transpiler {
     
     export function CreateSuite(ast: GherkinDocument): ReadonlyArray<ts.Statement> {
         const declarations = [
+            GetWorldDeclaration(),
             GetFailDeclaration()
         ].map(d => ts.createVariableStatement(single(ts.createToken(ts.SyntaxKind.DeclareKeyword)), d))
 
