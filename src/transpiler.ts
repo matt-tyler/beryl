@@ -133,6 +133,108 @@ export module transpiler {
             .concat(moduleStatements)
     }
 
+    function GetBackgroundStatements(...backgroundStatements: Background[]): Array<ts.Statement> {
+        return backgroundStatements.map(b => {
+            const fnCalls = b.steps.map(s => {
+                const name = `${b.name}.${camelCase(s.keyword.concat(s.text))}`
+                return ts.createAwait(
+                    ts.createCall(
+                        ts.createIdentifier(name),
+                        NO_TYPE_ARGUMENTS,
+                        NO_ARGUMENTS
+                    )
+                )
+            })
+            return ts.createStatement(ts.createCall(
+                ts.createIdentifier("env.BeforeAll"),
+                NO_TYPE_ARGUMENTS,
+                single(
+                    ts.createArrowFunction(
+                        single(ts.createToken(ts.SyntaxKind.AsyncKeyword)),
+                        NO_TYPE_PARAMETERS,
+                        single(
+                            ts.createParameter(
+                                NO_DECORATORS,
+                                NO_MODIFIERS,
+                                undefined,
+                                ts.createIdentifier("done"),
+                                undefined,
+                                undefined, //fix this
+                                undefined
+                            )
+                        ),
+                        NO_RETURN_TYPE,
+                        undefined,
+                        ts.createBlock(fnCalls.map(ts.createStatement), true)
+                    )
+                )
+            ))
+        })
+    }
+
+    function GetScenarioStatements(...scenarioDefinitions: ScenarioDefinition[]): Array<ts.Statement> {
+        const backgroundStatements = 
+            GetBackgroundStatements(...scenarioDefinitions.filter(IsBackground))
+
+        return new Array<ts.Statement>(...backgroundStatements)
+    }
+
+    export function CreateRunner(ast: GherkinDocument): ReadonlyArray<ts.Statement> {
+        const declarations = [
+            GetWorldDeclaration()
+        ].map(d => ts.createVariableStatement(single(ts.createToken(ts.SyntaxKind.DeclareKeyword)), d))
+
+        const describe = ts.createCall(
+            ts.createIdentifier("env.Describe"),
+            NO_TYPE_ARGUMENTS,
+            [
+                ts.createStringLiteral(ast.feature.name),
+                ts.createArrowFunction(
+                    NO_MODIFIERS,
+                    NO_TYPE_PARAMETERS,
+                    single(
+                        ts.createParameter(
+                            NO_DECORATORS,
+                            NO_MODIFIERS,
+                            undefined,
+                            ts.createIdentifier("done"),
+                            undefined,
+                            undefined, // fix this
+                            undefined
+                        )
+                    ),
+                    NO_RETURN_TYPE,
+                    undefined,
+                    ts.createBlock(
+                        GetScenarioStatements(...ast.feature.children),
+                        true
+                    )
+                )
+            ]
+        )
+
+        const runner = ts.createFunctionDeclaration(
+            NO_DECORATORS,
+            single(ts.createToken(ts.SyntaxKind.ExportKeyword)),
+            NO_ASTERIX,
+            ts.createIdentifier("GetSuite"),
+            NO_TYPE_ARGUMENTS,
+            single(ts.createParameter(
+                NO_DECORATORS,
+                NO_MODIFIERS,
+                undefined,
+                "env",
+                undefined,
+                ts.createTypeReferenceNode("jasmine.Env", NO_TYPE_ARGUMENTS)
+            )),
+            ts.createTypeReferenceNode("jasmine.SuiteOrSpec", undefined),
+            ts.createBlock(single(ts.createStatement(describe)), true)
+        )
+
+        return new Array<ts.Statement>(...declarations)
+            .concat(runner)
+    }
+
     export function CreateSource(filename: string, statements: ReadonlyArray<ts.Statement>) {
         const file = ts.createSourceFile(
             filename,
@@ -162,6 +264,7 @@ const NO_DECORATORS = empty<ts.Decorator>()
 const NO_MODIFIERS = empty<ts.Modifier>()
 const NO_TYPE_PARAMETERS = empty<ts.TypeParameterDeclaration>()
 const NO_PARAMETERS = empty<ts.ParameterDeclaration>()
+const NO_ARGUMENTS = empty<ts.Expression>()
 const NO_TYPE_ARGUMENTS = undefined
 const NO_RETURN_TYPE = undefined
 const NO_ASTERIX = undefined

@@ -9,7 +9,9 @@ let parser = new gherkin.Parser()
 readFile("./example.feature").then(buf => {
     let ast = parser.parse(buf.toString())
     let suite = transpiler.CreateSuite(ast)
-    let code = transpiler.CreateSource("suite.ts", suite)
+    let runner = transpiler.CreateRunner(ast)
+    let code = transpiler.CreateSource("suite.ts", runner)
     console.log(code)
-}).then((err: any) => console.log(err))
+    //console.log(JSON.stringify(ast, null, 2))
+}).catch((err: any) => console.log(err))
 
