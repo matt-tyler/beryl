@@ -145,6 +145,11 @@ export module transpiler {
                     )
                 )
             })
+            const doneCall = ts.createStatement(ts.createCall(
+                ts.createIdentifier("done"),
+                NO_TYPE_ARGUMENTS,
+                NO_ARGUMENTS
+            ))
             return ts.createStatement(ts.createCall(
                 ts.createIdentifier("env.BeforeAll"),
                 NO_TYPE_ARGUMENTS,
@@ -165,7 +170,10 @@ export module transpiler {
                         ),
                         NO_RETURN_TYPE,
                         undefined,
-                        ts.createBlock(fnCalls.map(ts.createStatement), true)
+                        ts.createBlock(
+                            fnCalls.map(ts.createStatement).concat(doneCall),
+                            true
+                        )
                     )
                 )
             ))
