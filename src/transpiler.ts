@@ -180,11 +180,94 @@ export module transpiler {
         })
     }
 
+    function GetTable(examples: Examples): ts.ArrayLiteralExpression {
+        const keys = examples.tableHeader.cells.map(c => c.value)    
+        const table = ts.createArrayLiteral(
+            examples.tableBody.map((t, i) => {
+                return ts.createObjectLiteral(
+                    t.cells.map((c, i) => ts.createPropertyAssignment(keys[i], ts.createLiteral(c.value))),
+                    true
+                )
+            }), true
+        )
+        return table
+    }
+
+    function GetItStatement(step: Step, desc: string) {
+        const text = step.keyword.concat(step.text)
+        const doneCall = ts.createCall(ts.createIdentifier("done"),
+            NO_TYPE_ARGUMENTS, NO_ARGUMENTS)
+
+        const awaitExpr = ts.createAwait(
+            ts.createCall(
+                ts.createPropertyAccess(
+                    ts.createIdentifier(camelCase(desc)),
+                    camelCase(text)
+                ),
+                NO_TYPE_ARGUMENTS,
+                single(ts.createIdentifier("row"))
+            )
+        )
+            
+        const fn = ts.createArrowFunction(
+            single(ts.createToken(ts.SyntaxKind.AsyncKeyword)),
+            NO_TYPE_PARAMETERS,
+            single(ts.createParameter(
+                NO_DECORATORS,
+                NO_MODIFIERS,
+                undefined,
+                ts.createIdentifier("done"),
+                undefined,
+                NO_RETURN_TYPE
+            )),
+            NO_RETURN_TYPE,
+            undefined,
+            ts.createBlock([awaitExpr, doneCall].map(ts.createStatement), true)
+        )
+
+        return ts.createCall(
+            ts.createIdentifier("env.It"),
+            NO_TYPE_ARGUMENTS,
+            [
+                ts.createStringLiteral(text),
+                fn
+            ]
+        )
+    }
+
+    function GetScenarioOutlineStatements(...scenarioOutline: ScenarioOutline[]): Array<ts.Statement> {
+        const statements = scenarioOutline.map(sc => {
+            const tableCall = ts.createPropertyAccess(GetTable(sc.examples[0]), "forEach")
+            const its = sc.steps.map(st => GetItStatement(st, sc.name))
+            const arrow = ts.createArrowFunction(
+                NO_MODIFIERS,
+                NO_TYPE_PARAMETERS,
+                single(ts.createParameter(
+                    NO_DECORATORS,
+                    NO_MODIFIERS,
+                    undefined,
+                    ts.createIdentifier("row"),
+                    undefined,
+                    NO_RETURN_TYPE
+                )),
+                NO_RETURN_TYPE,
+                undefined,
+                ts.createBlock(its.map(ts.createStatement), true)
+            )
+            return ts.createCall(tableCall, NO_TYPE_ARGUMENTS, single(arrow))
+        })
+        return statements.map(ts.createStatement)
+    }
+
     function GetScenarioStatements(...scenarioDefinitions: ScenarioDefinition[]): Array<ts.Statement> {
         const backgroundStatements = 
             GetBackgroundStatements(...scenarioDefinitions.filter(IsBackground))
 
+        const scenarioOutlineStatements =
+            GetScenarioOutlineStatements(...scenarioDefinitions.filter(IsScenarioOutline))
+
         return new Array<ts.Statement>(...backgroundStatements)
+            .concat(...scenarioOutlineStatements)
     }
 
     export function CreateRunner(ast: GherkinDocument): ReadonlyArray<ts.Statement> {
@@ -200,17 +283,7 @@ export module transpiler {
                 ts.createArrowFunction(
                     NO_MODIFIERS,
                     NO_TYPE_PARAMETERS,
-                    single(
-                        ts.createParameter(
-                            NO_DECORATORS,
-                            NO_MODIFIERS,
-                            undefined,
-                            ts.createIdentifier("done"),
-                            undefined,
-                            undefined, // fix this
-                            undefined
-                        )
-                    ),
+                    NO_PARAMETERS,
                     NO_RETURN_TYPE,
                     undefined,
                     ts.createBlock(
