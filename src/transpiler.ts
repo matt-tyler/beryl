@@ -254,7 +254,27 @@ export module transpiler {
                 undefined,
                 ts.createBlock(its.map(ts.createStatement), true)
             )
-            return ts.createCall(tableCall, NO_TYPE_ARGUMENTS, single(arrow))
+
+            return ts.createCall(
+                ts.createIdentifier("env.Describe"),
+                NO_TYPE_ARGUMENTS,
+                [
+                    ts.createStringLiteral(sc.name),
+                    ts.createArrowFunction(
+                        NO_MODIFIERS,
+                        NO_TYPE_PARAMETERS,
+                        NO_PARAMETERS,
+                        NO_RETURN_TYPE,
+                        undefined,
+                        ts.createBlock(
+                            single(ts.createCall(
+                                tableCall,
+                                NO_TYPE_ARGUMENTS,
+                                single(arrow)
+                        )).map(ts.createStatement), true)
+                    )
+                ]
+            )
         })
         return statements.map(ts.createStatement)
     }
