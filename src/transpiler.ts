@@ -1,7 +1,7 @@
 
 import ts from "typescript"
 import camelCase from "lodash.camelcase"
-import { toASCII } from "punycode";
+//import { toASCII } from "punycode";
 import { isUndefined } from "util"
 
 export module transpiler {

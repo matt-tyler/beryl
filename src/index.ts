@@ -12,6 +12,7 @@ readFile("./example.feature").then(buf => {
     let runner = transpiler.CreateRunner(ast)
     let code = transpiler.CreateSource("suite.ts", runner)
     console.log(code)
+    console.log(runner)
     //console.log(JSON.stringify(ast, null, 2))
 }).catch((err: any) => console.log(err))
 
